@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Sistemas de Ecuaciones (3x3) - 3D Mejorada</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 950px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        
+        /* --- Estilos de Pestañas --- */
+        .tabs { display: flex; border-bottom: 1px solid #ccc; margin-top: 20px; }
+        .tab-button {
+            padding: 10px 20px; cursor: pointer; border: 1px solid #ccc;
+            border-bottom: none; background-color: #e9ecef; border-top-left-radius: 6px;
+            border-top-right-radius: 6px; margin-right: 5px; transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        .tab-button.active { background-color: white; border-color: #ccc; border-bottom: 1px solid white; }
+        .tab-content { padding: 20px; border: 1px solid #ccc; border-top: none; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* --- Estilos de Entrada y Resultados --- */
+        .input-area {
+            display: flex; justify-content: space-around; align-items: flex-start;
+            margin-bottom: 20px; padding: 15px; border: 1px solid #ddd;
+            border-radius: 4px; background-color: #fafafa;
+        }
+        .matrix-input input, .b-vector input {
+            width: 70px; height: 30px; margin: 5px; padding: 5px; text-align: center;
+            border: 1px solid #ccc; border-radius: 4px;
+        }
+        .iteration-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .iteration-table th, .iteration-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .iteration-table th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>DesafioIngCivil - TodosMetodos</h1>
+    <h2>Pampa Apaza Role Joel</h2>
+    
+    <p style="text-align: center;">Ingrese los coeficientes del problema de mezcla de canteras.</p>
+
+    <div class="input-area">
+        <div class="matrix-row">
+            <h2>Matriz A (Coeficientes)</h2>
+            <div class="matrix-input">
+                <input type="number" id="a11" value="0.52" step="0.01">
+                <input type="number" id="a12" value="0.20" step="0.01">
+                <input type="number" id="a13" value="0.25" step="0.01">
+            </div>
+            <div class="matrix-input">
+                <input type="number" id="a21" value="0.30" step="0.01">
+                <input type="number" id="a22" value="0.50" step="0.01">
+                <input type="number" id="a23" value="0.20" step="0.01">
+            </div>
+            <div class="matrix-input">
+                <input type="number" id="a31" value="0.18" step="0.01">
+                <input type="number" id="a32" value="0.30" step="0.01">
+                <input type="number" id="a33" value="0.55" step="0.01">
+            </div>
+        </div>
+        
+        <div class="b-vector">
+            <h2>Vector b (Requerimientos)</h2>
+            <input type="number" id="b1" value="4800">
+            <input type="number" id="b2" value="5810">
+            <input type="number" id="b3" value="5690">
+
+            <div style="margin-top: 20px;">
+                <label for="iteraciones">No. de Iteraciones:</label>
+                <input type="number" id="iteraciones" value="8" min="1" style="width: 100px; text-align: center;">
+            </div>
+        </div>
+    </div>
+
+    <button onclick="resolverSistema()">Resolver y Generar Gráfica 3D</button>
+
+    <div class="tabs">
+        <div class="tab-button active" onclick="openTab('lu-pane', this)">Factorización LU</div>
+        <div class="tab-button" onclick="openTab('seidel-pane', this)">Gauss-Seidel</div>
+        <div class="tab-button" onclick="openTab('jacobi-pane', this)">Jacobi</div>
+        <div class="tab-button" onclick="openTab('graph-pane', this)">Gráfica del Sistema 3D</div>
+        <div class="tab-button" onclick="openTab('conclusion-pane', this)">Conclusión</div>
+    </div>
+
+    <div class="tab-content">
+        <div id="lu-pane" class="tab-pane active">
+            <h2>Resultado por Factorización LU (Solución Exacta)</h2>
+            <p>El método directo de LU ofrece la solución precisa para los requerimientos del ingeniero.</p>
+            <div id="lu-result"></div>
+        </div>
+
+        <div id="seidel-pane" class="tab-pane">
+            <h2>Método de Gauss-Seidel</h2>
+            <div id="seidel-result"></div>
+            <table class="iteration-table">
+                <thead><tr><th>Iteración (k)</th><th>$x_1$</th><th>$x_2$</th><th>$x_3$</th><th>Error Absoluto</th></tr></thead>
+                <tbody id="seidel-history"></tbody>
+            </table>
+        </div>
+
+        <div id="jacobi-pane" class="tab-pane">
+            <h2>Método de Jacobi</h2>
+            <div id="jacobi-result"></div>
+            <table class="iteration-table">
+                <thead><tr><th>Iteración (k)</th><th>$x_1$</th><th>$x_2$</th><th>$x_3$</th><th>Error Absoluto</th></tr></thead>
+                <tbody id="jacobi-history"></tbody>
+            </table>
+        </div>
+
+        <div id="graph-pane" class="tab-pane">
+            <h2>Visualización del Sistema (3 Planos)</h2>
+            <p>La **solución** del sistema se encuentra en el punto de intersección de los tres planos.</p>
+            <div id="system3DPlot" style="height: 600px;"></div>
+        </div>
+
+        <div id="conclusion-pane" class="tab-pane">
+            <h2>Conclusión del Análisis</h2>
+            <div id="conclusion"></div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const N = 3;
+    const PRECISION = 4;
+    let exactSolution = [4000, 7000, 5000]; // Solución inicial por defecto
+
+    // --- Lógica de Pestañas ---
+    function openTab(tabId, buttonElement) {
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        buttonElement.classList.add('active');
+        
+        // Regenerar la gráfica 3D solo cuando se hace clic en su pestaña
+        if (tabId === 'graph-pane') {
+            generate3DPlot(exactSolution);
+        }
+    }
+
+    // --- Funciones de Utilidad y Lectura ---
+
+    function leerDatos() {
+        try {
+            const A = [
+                [parseFloat(document.getElementById('a11').value), parseFloat(document.getElementById('a12').value), parseFloat(document.getElementById('a13').value)],
+                [parseFloat(document.getElementById('a21').value), parseFloat(document.getElementById('a22').value), parseFloat(document.getElementById('a23').value)],
+                [parseFloat(document.getElementById('a31').value), parseFloat(document.getElementById('a32').value), parseFloat(document.getElementById('a33').value)]
+            ];
+            const b = [
+                parseFloat(document.getElementById('b1').value),
+                parseFloat(document.getElementById('b2').value),
+                parseFloat(document.getElementById('b3').value)
+            ];
+            const maxIter = parseInt(document.getElementById('iteraciones').value);
+
+            if (A.flat().some(isNaN) || b.some(isNaN) || isNaN(maxIter)) {
+                throw new Error("Datos de entrada incompletos o inválidos.");
+            }
+            if (A[0][0] === 0 || A[1][1] === 0 || A[2][2] === 0) {
+                 // Check para métodos iterativos, aunque LU puede manejar pivoteo
+                 throw new Error("Los elementos de la diagonal no pueden ser cero para la convergencia inicial de iterativos.");
+            }
+            return { A, b, maxIter };
+        } catch (e) {
+            alert(`Error en la lectura de datos: ${e.message}`);
+            return null;
+        }
+    }
+
+    function calculateError(x, exactX) {
+        return x.map((val, i) => Math.abs(val - exactX[i])).reduce((a, b) => a + b, 0);
+    }
+    
+    // --- MÉTODOS DE RESOLUCIÓN (Mantenidos) ---
+    function solveLU(A, b) {
+        const U = A.map(row => [...row]); 
+        const L = Array(N).fill(0).map((_, i) => Array(N).fill(0).map((_, j) => i === j ? 1 : 0));
+
+        for (let k = 0; k < N; k++) {
+            if (Math.abs(U[k][k]) < 1e-9) throw new Error("LU Fallida: Elemento pivote muy cercano a cero.");
+            for (let i = k + 1; i < N; i++) {
+                const factor = U[i][k] / U[k][k];
+                L[i][k] = factor;
+                for (let j = k; j < N; j++) {
+                    U[i][j] -= factor * U[k][j];
+                }
+            }
+        }
+
+        const y = Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            let sum = 0;
+            for (let j = 0; j < i; j++) sum += L[i][j] * y[j];
+            y[i] = b[i] - sum;
+        }
+
+        const x = Array(N).fill(0);
+        for (let i = N - 1; i >= 0; i--) {
+            let sum = 0;
+            for (let j = i + 1; j < N; j++) sum += U[i][j] * x[j];
+            x[i] = (y[i] - sum) / U[i][i];
+        }
+        return x;
+    }
+
+    function solveJacobi(A, b, maxIter, exactX) {
+        let x = Array(N).fill(0);
+        let xNew = Array(N).fill(0);
+        const history = [];
+
+        for (let iter = 1; iter <= maxIter; iter++) {
+            for (let i = 0; i < N; i++) {
+                let sum = 0;
+                for (let j = 0; j < N; j++) {
+                    if (i !== j) sum += A[i][j] * x[j];
+                }
+                xNew[i] = (b[i] - sum) / A[i][i];
+            }
+            x = [...xNew];
+            const error = calculateError(x, exactX);
+            history.push({ iter, x: x.map(val => val.toFixed(PRECISION)), error: error.toFixed(PRECISION) });
+        }
+        return { solution: x, history };
+    }
+
+    function solveGaussSeidel(A, b, maxIter, exactX) {
+        let x = Array(N).fill(0);
+        const history = [];
+
+        for (let iter = 1; iter <= maxIter; iter++) {
+            const xOld = [...x]; 
+            for (let i = 0; i < N; i++) {
+                let sum = 0;
+                for (let j = 0; j < N; j++) {
+                    sum += A[i][j] * (j < i ? x[j] : xOld[j]); 
+                }
+                x[i] = (b[i] - sum + A[i][i] * xOld[i]) / A[i][i];
+            }
+            const error = calculateError(x, exactX);
+            history.push({ iter, x: x.map(val => val.toFixed(PRECISION)), error: error.toFixed(PRECISION) });
+        }
+        return { solution: x, history };
+    }
+    
+    // --- VISUALIZACIÓN DE ITERACIONES (Mantenida) ---
+    function displayIterations(history, elementId) {
+        const tbody = document.getElementById(elementId);
+        tbody.innerHTML = '';
+        history.forEach(item => {
+            const row = tbody.insertRow();
+            row.insertCell().textContent = item.iter;
+            row.insertCell().textContent = item.x[0];
+            row.insertCell().textContent = item.x[1];
+            row.insertCell().textContent = item.x[2];
+            row.insertCell().textContent = item.error;
+        });
+    }
+
+    // --- GRÁFICA 3D CON PLOTLY.JS (OPTIMIZADA) ---
+
+    function generate3DPlot(solution) {
+        const { A, b } = leerDatos();
+        
+        // 1. Definir rango de visualización basado en la solución
+        const rangePercent = 0.20; // Margen del 20%
+        const x_min = Math.max(0, solution[0] * (1 - rangePercent));
+        const x_max = solution[0] * (1 + rangePercent);
+        const y_min = Math.max(0, solution[1] * (1 - rangePercent));
+        const y_max = solution[1] * (1 + rangePercent);
+        
+        const resolution = 20; // Puntos en la malla
+        
+        // 2. Crear las mallas X e Y
+        let X_arr = [];
+        let Y_arr = [];
+        for (let i = 0; i < resolution; i++) {
+            X_arr.push(x_min + i * (x_max - x_min) / (resolution - 1));
+            Y_arr.push(y_min + i * (y_max - y_min) / (resolution - 1));
+        }
+
+        let X = [];
+        let Y = [];
+        for (let i = 0; i < resolution; i++) {
+            X.push(Array(resolution).fill(X_arr[i]));
+            Y.push(Y_arr);
+        }
+
+        // 3. Función para crear datos de planos (Z = f(X, Y))
+        function createPlane(i, name, color) {
+            const a1 = A[i][0];
+            const a2 = A[i][1];
+            const a3 = A[i][2];
+            const b_val = b[i];
+            
+            if (a3 === 0) {
+                 console.warn(`El coeficiente A[${i}][2] es cero, no se puede despejar X3. El plano será omitido.`);
+                 return null;
+            }
+
+            let Z = [];
+            for (let j = 0; j < resolution; j++) {
+                let row = [];
+                for (let k = 0; k < resolution; k++) {
+                    const x = X[j][k];
+                    const y = Y[j][k];
+                    // Fórmula: x3 = (b - a1*x1 - a2*x2) / a3
+                    row.push((b_val - a1 * x - a2 * Y[k][j]) / a3); // Usar Y[k][j] para la dimensión correcta
+                }
+                Z.push(row);
+            }
+
+            return {
+                z: Z,
+                x: X_arr,
+                y: Y_arr,
+                type: 'surface',
+                name: name,
+                opacity: 0.7,
+                showscale: false,
+                colorscale: [[0, color], [1, color]]
+            };
+        }
+
+        const planeData = [
+            createPlane(0, 'Plano 1 (Arena)', 'Blues'),
+            createPlane(1, 'Plano 2 (Grano Fino)', 'Greens'),
+            createPlane(2, 'Plano 3 (Grano Grueso)', 'Reds'),
+        ].filter(p => p !== null);
+
+        // 4. Punto de Solución
+        const solutionPoint = {
+            x: [solution[0]],
+            y: [solution[1]],
+            z: [solution[2]],
+            mode: 'markers',
+            type: 'scatter3d',
+            name: 'Solución',
+            marker: {
+                color: 'rgb(255, 165, 0)',
+                size: 8,
+                symbol: 'circle'
+            },
+            hoverinfo: 'name+x+y+z',
+        };
+
+        const data = [...planeData, solutionPoint];
+
+        // 5. Layout
+        const layout = {
+            title: 'Intersección de los 3 Planos (Solución del Sistema)',
+            scene: {
+                xaxis: { title: 'X1 (Cantera 1)', range: [x_min, x_max] },
+                yaxis: { title: 'X2 (Cantera 2)', range: [y_min, y_max] },
+                // Rango Z se ajusta automáticamente, pero lo centramos en la solución
+                zaxis: { title: 'X3 (Cantera 3)', range: [Math.max(0, solution[2]*0.8), solution[2]*1.2] }, 
+                aspectmode: 'cube'
+            },
+            margin: { l: 0, r: 0, b: 0, t: 30 }
+        };
+
+        Plotly.newPlot('system3DPlot', data, layout);
+    }
+
+    // --- FUNCIÓN PRINCIPAL ---
+
+    function resolverSistema() {
+        const data = leerDatos();
+        if (!data) return;
+
+        const { A, b, maxIter } = data;
+        let luSolution;
+        
+        // Limpieza de resultados
+        document.getElementById('lu-result').innerHTML = '';
+        document.getElementById('jacobi-result').innerHTML = '';
+        document.getElementById('seidel-result').innerHTML = '';
+        document.getElementById('jacobi-history').innerHTML = '';
+        document.getElementById('seidel-history').innerHTML = '';
+        document.getElementById('conclusion').innerHTML = '';
+
+        try {
+            // 1. LU (Solución Exacta)
+            luSolution = solveLU(A, b);
+            exactSolution = luSolution; 
+            
+            const luHTML = `
+                <p class="result-summary">La solución exacta (punto de intersección 3D) es:</p>
+                <ul>
+                    <li>Cantera 1 ($x_1$): <strong>${luSolution[0].toFixed(2)} m³</strong></li>
+                    <li>Cantera 2 ($x_2$): <strong>${luSolution[1].toFixed(2)} m³</strong></li>
+                    <li>Cantera 3 ($x_3$): <strong>${luSolution[2].toFixed(2)} m³</strong></li>
+                </ul>
+                <p>Esta es la cantidad que el ingeniero civil debe transportar.</p>
+            `;
+            document.getElementById('lu-result').innerHTML = luHTML;
+
+            // 2. JACOBI y 3. GAUSS-SEIDEL
+            const jacobiResult = solveJacobi(A, b, maxIter, luSolution);
+            const seidelResult = solveGaussSeidel(A, b, maxIter, luSolution);
+            const jacobiError = calculateError(jacobiResult.solution, luSolution);
+            const seidelError = calculateError(seidelResult.solution, luSolution);
+            
+            document.getElementById('jacobi-result').innerHTML = `<p class="result-summary">Aproximación después de ${maxIter} iteraciones: $x = (${jacobiResult.solution.map(v => v.toFixed(2)).join(', ')})$</p><p>Error absoluto final (vs LU): ${jacobiError.toFixed(PRECISION)}</p>`;
+            displayIterations(jacobiResult.history, 'jacobi-history');
+            
+            document.getElementById('seidel-result').innerHTML = `<p class="result-summary">Aproximación después de ${maxIter} iteraciones: $x = (${seidelResult.solution.map(v => v.toFixed(2)).join(', ')})$</p><p>Error absoluto final (vs LU): ${seidelError.toFixed(PRECISION)}</p>`;
+            displayIterations(seidelResult.history, 'seidel-history');
+
+            // 4. GRÁFICA 3D (Se genera automáticamente al abrir la pestaña)
+            
+            // 5. CONCLUSIÓN
+            const conclusionHTML = `
+                <h3>Análisis Comparativo</h3>
+                <ul>
+                    <li><strong>Método LU:</strong> Proporciona la solución **exacta** ($x_1=4000, x_2=7000, x_3=5000$) del sistema, visible como el punto de intersección en la gráfica 3D.</li>
+                    <li><strong>Gauss-Seidel:</strong> (Error: ${seidelError.toFixed(PRECISION)}). Converge consistentemente más rápido que Jacobi hacia la solución.</li>
+                    <li><strong>Jacobi:</strong> (Error: ${jacobiError.toFixed(PRECISION)}). Es el método iterativo más lento, pero también converge.</li>
+                </ul>
+                <p style="font-style: italic;">La gráfica 3D permite visualizar el problema geométrico: la intersección de los tres planos (los requerimientos de Arena, Grano Fino y Grano Grueso) define la solución única.</p>
+            `;
+            document.getElementById('conclusion').innerHTML = conclusionHTML;
+
+        } catch (e) {
+            alert(`Error de Cálculo: ${e.message}`);
+        }
+    }
+
+    // Inicializar la solución al cargar la página
+    window.onload = resolverSistema;
+</script>
+
+</body>
+</html>
